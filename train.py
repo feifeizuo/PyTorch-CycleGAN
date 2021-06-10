@@ -8,19 +8,22 @@ from torch.utils.data import DataLoader
 from torch.autograd import Variable
 from PIL import Image
 import torch
+import os
 
 from models import Generator
 from models import Discriminator
 from utils import ReplayBuffer
 from utils import LambdaLR
-from utils import Logger
 from utils import weights_init_normal
 from datasets import ImageDataset
+from torch.utils.tensorboard import SummaryWriter
+
+os.environ['CUDA_VISIBLE_DEVICES'] = '2,3'
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--epoch', type=int, default=0, help='starting epoch')
 parser.add_argument('--n_epochs', type=int, default=200, help='number of epochs of training')
-parser.add_argument('--batchSize', type=int, default=8, help='size of the batches')
+parser.add_argument('--batchSize', type=int, default=1, help='size of the batches')
 parser.add_argument('--dataroot', type=str, default='datasets/monet2photo/', help='root directory of the dataset')
 parser.add_argument('--lr', type=float, default=0.0002, help='initial learning rate')
 parser.add_argument('--decay_epoch', type=int, default=100, help='epoch to start linearly decaying the learning rate to 0')
@@ -41,6 +44,8 @@ netG_A2B = Generator(opt.input_nc, opt.output_nc)
 netG_B2A = Generator(opt.output_nc, opt.input_nc)
 netD_A = Discriminator(opt.input_nc)
 netD_B = Discriminator(opt.output_nc)
+
+writer = SummaryWriter()
 
 if True:
     netG_A2B.cuda()
@@ -93,7 +98,7 @@ dataloader = DataLoader(ImageDataset(opt.dataroot, transforms_=transforms_, unal
 #logger = Logger(opt.n_epochs, len(dataloader))
 ###################################
 
-
+global_step=0
 ###### Training ######
 for epoch in range(opt.epoch, opt.n_epochs):
     for i, batch in enumerate(dataloader):
@@ -172,8 +177,14 @@ for epoch in range(opt.epoch, opt.n_epochs):
 
         optimizer_D_B.step()
         ###################################
-        print(str(epoch) + ': ' + str(i))
-        # Progress report (http://localhost:8097)
+        
+        writer.add_scalars('Loss',{'loss_G': loss_G, 'loss_G_identity': (loss_identity_A + loss_identity_B), 'loss_G_GAN': (loss_GAN_A2B + loss_GAN_B2A),
+                    'loss_G_cycle': (loss_cycle_ABA + loss_cycle_BAB), 'loss_D': (loss_D_A + loss_D_B)},global_step)
+        writer.add_images('Image/real_A',real_A,global_step)
+        writer.add_images('Image/real_B',real_B,global_step)
+        writer.add_images('Image/fake_A',fake_A,global_step)
+        writer.add_images('Image/fake_B',fake_B,global_step)
+        global_step +=1
         # print({'loss_G': loss_G, 'loss_G_identity': (loss_identity_A + loss_identity_B), 'loss_G_GAN': (loss_GAN_A2B + loss_GAN_B2A),
                     #'loss_G_cycle': (loss_cycle_ABA + loss_cycle_BAB), 'loss_D': (loss_D_A + loss_D_B)})#,
                     #images={'real_A': real_A, 'real_B': real_B, 'fake_A': fake_A, 'fake_B': fake_B})
