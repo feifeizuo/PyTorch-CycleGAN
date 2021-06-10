@@ -3,7 +3,7 @@
 import argparse
 import itertools
 
-import torchvision.transforms as transforms
+from torchvision import transforms
 from torch.utils.data import DataLoader
 from torch.autograd import Variable
 from PIL import Image
@@ -20,15 +20,15 @@ from datasets import ImageDataset
 parser = argparse.ArgumentParser()
 parser.add_argument('--epoch', type=int, default=0, help='starting epoch')
 parser.add_argument('--n_epochs', type=int, default=200, help='number of epochs of training')
-parser.add_argument('--batchSize', type=int, default=1, help='size of the batches')
-parser.add_argument('--dataroot', type=str, default='datasets/horse2zebra/', help='root directory of the dataset')
+parser.add_argument('--batchSize', type=int, default=8, help='size of the batches')
+parser.add_argument('--dataroot', type=str, default='datasets/monet2photo/', help='root directory of the dataset')
 parser.add_argument('--lr', type=float, default=0.0002, help='initial learning rate')
 parser.add_argument('--decay_epoch', type=int, default=100, help='epoch to start linearly decaying the learning rate to 0')
 parser.add_argument('--size', type=int, default=256, help='size of the data crop (squared assumed)')
 parser.add_argument('--input_nc', type=int, default=3, help='number of channels of input data')
 parser.add_argument('--output_nc', type=int, default=3, help='number of channels of output data')
 parser.add_argument('--cuda', action='store_true', help='use GPU computation')
-parser.add_argument('--n_cpu', type=int, default=8, help='number of cpu threads to use during batch generation')
+parser.add_argument('--n_cpu', type=int, default=0, help='number of cpu threads to use during batch generation')
 opt = parser.parse_args()
 print(opt)
 
@@ -42,7 +42,7 @@ netG_B2A = Generator(opt.output_nc, opt.input_nc)
 netD_A = Discriminator(opt.input_nc)
 netD_B = Discriminator(opt.output_nc)
 
-if opt.cuda:
+if True:
     netG_A2B.cuda()
     netG_B2A.cuda()
     netD_A.cuda()
@@ -68,12 +68,14 @@ lr_scheduler_G = torch.optim.lr_scheduler.LambdaLR(optimizer_G, lr_lambda=Lambda
 lr_scheduler_D_A = torch.optim.lr_scheduler.LambdaLR(optimizer_D_A, lr_lambda=LambdaLR(opt.n_epochs, opt.epoch, opt.decay_epoch).step)
 lr_scheduler_D_B = torch.optim.lr_scheduler.LambdaLR(optimizer_D_B, lr_lambda=LambdaLR(opt.n_epochs, opt.epoch, opt.decay_epoch).step)
 
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
 # Inputs & targets memory allocation
 Tensor = torch.cuda.FloatTensor if opt.cuda else torch.Tensor
 input_A = Tensor(opt.batchSize, opt.input_nc, opt.size, opt.size)
 input_B = Tensor(opt.batchSize, opt.output_nc, opt.size, opt.size)
-target_real = Variable(Tensor(opt.batchSize).fill_(1.0), requires_grad=False)
-target_fake = Variable(Tensor(opt.batchSize).fill_(0.0), requires_grad=False)
+target_real = Variable(Tensor(opt.batchSize).fill_(1.0), requires_grad=False).to(device)
+target_fake = Variable(Tensor(opt.batchSize).fill_(0.0), requires_grad=False).to(device)
 
 fake_A_buffer = ReplayBuffer()
 fake_B_buffer = ReplayBuffer()
@@ -88,15 +90,16 @@ dataloader = DataLoader(ImageDataset(opt.dataroot, transforms_=transforms_, unal
                         batch_size=opt.batchSize, shuffle=True, num_workers=opt.n_cpu)
 
 # Loss plot
-logger = Logger(opt.n_epochs, len(dataloader))
+#logger = Logger(opt.n_epochs, len(dataloader))
 ###################################
+
 
 ###### Training ######
 for epoch in range(opt.epoch, opt.n_epochs):
     for i, batch in enumerate(dataloader):
         # Set model input
-        real_A = Variable(input_A.copy_(batch['A']))
-        real_B = Variable(input_B.copy_(batch['B']))
+        real_A = batch['A'].to(device)
+        real_B = batch['B'].to(device)
 
         ###### Generators A2B and B2A ######
         optimizer_G.zero_grad()
@@ -169,11 +172,11 @@ for epoch in range(opt.epoch, opt.n_epochs):
 
         optimizer_D_B.step()
         ###################################
-
+        print(str(epoch) + ': ' + str(i))
         # Progress report (http://localhost:8097)
-        logger.log({'loss_G': loss_G, 'loss_G_identity': (loss_identity_A + loss_identity_B), 'loss_G_GAN': (loss_GAN_A2B + loss_GAN_B2A),
-                    'loss_G_cycle': (loss_cycle_ABA + loss_cycle_BAB), 'loss_D': (loss_D_A + loss_D_B)}, 
-                    images={'real_A': real_A, 'real_B': real_B, 'fake_A': fake_A, 'fake_B': fake_B})
+        # print({'loss_G': loss_G, 'loss_G_identity': (loss_identity_A + loss_identity_B), 'loss_G_GAN': (loss_GAN_A2B + loss_GAN_B2A),
+                    #'loss_G_cycle': (loss_cycle_ABA + loss_cycle_BAB), 'loss_D': (loss_D_A + loss_D_B)})#,
+                    #images={'real_A': real_A, 'real_B': real_B, 'fake_A': fake_A, 'fake_B': fake_B})
 
     # Update learning rates
     lr_scheduler_G.step()
