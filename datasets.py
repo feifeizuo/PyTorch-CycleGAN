@@ -26,3 +26,21 @@ class ImageDataset(Dataset):
 
     def __len__(self):
         return max(len(self.files_A), len(self.files_B))
+
+class ToothWhiteningDataset(Dataset):
+    def __init__(self, root, transforms_=None, unaligned=False, mode='train'):
+        self.transform = transforms.Compose(transforms_)
+
+        self.files_A = glob.glob(os.path.join(root, '%s/*/A.JPG' % mode))
+        self.files_B = glob.glob(os.path.join(root, '%s/*/B.JPG' % mode))
+        print('build tooth whitening dataset done.')
+
+    def __getitem__(self, index):
+        item_A = self.transform(Image.open(self.files_A[index % len(self.files_A)]))
+        item_B = self.transform(Image.open(self.files_B[index % len(self.files_B)]))
+        return {'A': item_A, 'B': item_B}
+
+
+    def __len__(self):
+        return max(len(self.files_A), len(self.files_B))
+

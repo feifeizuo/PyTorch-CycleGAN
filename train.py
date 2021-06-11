@@ -16,18 +16,19 @@ from utils import ReplayBuffer
 from utils import LambdaLR
 from utils import weights_init_normal
 from datasets import ImageDataset
+from datasets import ToothWhiteningDataset
 from torch.utils.tensorboard import SummaryWriter
 
-os.environ['CUDA_VISIBLE_DEVICES'] = '2,3'
+#os.environ['CUDA_VISIBLE_DEVICES'] = '2,3'
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--epoch', type=int, default=0, help='starting epoch')
 parser.add_argument('--n_epochs', type=int, default=200, help='number of epochs of training')
 parser.add_argument('--batchSize', type=int, default=1, help='size of the batches')
-parser.add_argument('--dataroot', type=str, default='datasets/monet2photo/', help='root directory of the dataset')
+parser.add_argument('--dataroot', type=str, default='datasets/tooth2whitening/', help='root directory of the dataset')
 parser.add_argument('--lr', type=float, default=0.0002, help='initial learning rate')
 parser.add_argument('--decay_epoch', type=int, default=100, help='epoch to start linearly decaying the learning rate to 0')
-parser.add_argument('--size', type=int, default=256, help='size of the data crop (squared assumed)')
+parser.add_argument('--size', type=int, default=512, help='size of the data crop (squared assumed)')
 parser.add_argument('--input_nc', type=int, default=3, help='number of channels of input data')
 parser.add_argument('--output_nc', type=int, default=3, help='number of channels of output data')
 parser.add_argument('--cuda', action='store_true', help='use GPU computation')
@@ -85,13 +86,15 @@ target_fake = Variable(Tensor(opt.batchSize).fill_(0.0), requires_grad=False).to
 fake_A_buffer = ReplayBuffer()
 fake_B_buffer = ReplayBuffer()
 
+writer.add_graph(netG_A2B,input_A.to(device))
+
 # Dataset loader
-transforms_ = [ transforms.Resize(int(opt.size*1.12), Image.BICUBIC), 
+transforms_ = [ transforms.Resize(int(opt.size*1.5)),
                 transforms.RandomCrop(opt.size), 
                 transforms.RandomHorizontalFlip(),
                 transforms.ToTensor(),
-                transforms.Normalize((0.5,0.5,0.5), (0.5,0.5,0.5)) ]
-dataloader = DataLoader(ImageDataset(opt.dataroot, transforms_=transforms_, unaligned=True), 
+                transforms.Normalize((0.5,0.5,0.5), (0.5,0.5,0.5))] # normalize to [-1,1]
+dataloader = DataLoader(ToothWhiteningDataset(opt.dataroot, transforms_=transforms_, unaligned=False),
                         batch_size=opt.batchSize, shuffle=True, num_workers=opt.n_cpu)
 
 # Loss plot
@@ -180,10 +183,10 @@ for epoch in range(opt.epoch, opt.n_epochs):
         
         writer.add_scalars('Loss',{'loss_G': loss_G, 'loss_G_identity': (loss_identity_A + loss_identity_B), 'loss_G_GAN': (loss_GAN_A2B + loss_GAN_B2A),
                     'loss_G_cycle': (loss_cycle_ABA + loss_cycle_BAB), 'loss_D': (loss_D_A + loss_D_B)},global_step)
-        writer.add_images('Image/real_A',real_A,global_step)
-        writer.add_images('Image/real_B',real_B,global_step)
-        writer.add_images('Image/fake_A',fake_A,global_step)
-        writer.add_images('Image/fake_B',fake_B,global_step)
+        writer.add_images('Image/real_A',(real_A.cpu() + 1)/2.0,global_step)
+        writer.add_images('Image/real_B',(real_B.cpu() + 1)/2.0,global_step)
+        writer.add_images('Image/fake_A',(fake_A.cpu() + 1)/2.0,global_step)
+        writer.add_images('Image/fake_B',(fake_B.cpu() + 1)/2.0,global_step)
         global_step +=1
         # print({'loss_G': loss_G, 'loss_G_identity': (loss_identity_A + loss_identity_B), 'loss_G_GAN': (loss_GAN_A2B + loss_GAN_B2A),
                     #'loss_G_cycle': (loss_cycle_ABA + loss_cycle_BAB), 'loss_D': (loss_D_A + loss_D_B)})#,
