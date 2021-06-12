@@ -102,8 +102,20 @@ ENV/
 
 # project directories
 datasets/
+output/*.png
 output/A/
 output/B/
 
 # model checkpoints
 *.pth
+.idea/misc.xml
+runs/Jun11_11-21-59_DESKTOP-2OAR6DG/events.out.tfevents.1623381719.DESKTOP-2OAR6DG.31572.0
+
+# pycharm 
+.idea/*
+
+# tensorboard
+runs/*
+
+# vscode
+.vscode/*
