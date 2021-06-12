@@ -23,8 +23,8 @@ from torch.utils.tensorboard import SummaryWriter
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--epoch', type=int, default=0, help='starting epoch')
-parser.add_argument('--n_epochs', type=int, default=200, help='number of epochs of training')
-parser.add_argument('--batchSize', type=int, default=1, help='size of the batches')
+parser.add_argument('--n_epochs', type=int, default=1000, help='number of epochs of training')
+parser.add_argument('--batchSize', type=int, default=8, help='size of the batches')
 parser.add_argument('--dataroot', type=str, default='datasets/tooth2whitening/', help='root directory of the dataset')
 parser.add_argument('--lr', type=float, default=0.0002, help='initial learning rate')
 parser.add_argument('--decay_epoch', type=int, default=100, help='epoch to start linearly decaying the learning rate to 0')
@@ -89,9 +89,11 @@ fake_B_buffer = ReplayBuffer()
 writer.add_graph(netG_A2B,input_A.to(device))
 
 # Dataset loader
-transforms_ = [ transforms.Resize(int(opt.size*1.5)),
-                transforms.RandomCrop(opt.size), 
+transforms_ = [ transforms.CenterCrop((1200,2800)),
+                transforms.Resize((300,700)),
+                transforms.RandomCrop((256,256)),
                 transforms.RandomHorizontalFlip(),
+                transforms.RandomVerticalFlip(),
                 transforms.ToTensor(),
                 transforms.Normalize((0.5,0.5,0.5), (0.5,0.5,0.5))] # normalize to [-1,1]
 dataloader = DataLoader(ToothWhiteningDataset(opt.dataroot, transforms_=transforms_, unaligned=False),
