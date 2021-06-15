@@ -19,12 +19,12 @@ from datasets import ImageDataset
 from datasets import ToothWhiteningDataset
 from torch.utils.tensorboard import SummaryWriter
 
-#os.environ['CUDA_VISIBLE_DEVICES'] = '2,3'
+os.environ['CUDA_VISIBLE_DEVICES'] = '0,1'
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--epoch', type=int, default=0, help='starting epoch')
-parser.add_argument('--n_epochs', type=int, default=1000, help='number of epochs of training')
-parser.add_argument('--batchSize', type=int, default=8, help='size of the batches')
+parser.add_argument('--n_epochs', type=int, default=10000, help='number of epochs of training')
+parser.add_argument('--batchSize', type=int, default=4, help='size of the batches')
 parser.add_argument('--dataroot', type=str, default='datasets/tooth2whitening/', help='root directory of the dataset')
 parser.add_argument('--lr', type=float, default=0.0002, help='initial learning rate')
 parser.add_argument('--decay_epoch', type=int, default=100, help='epoch to start linearly decaying the learning rate to 0')
@@ -32,12 +32,9 @@ parser.add_argument('--size', type=int, default=512, help='size of the data crop
 parser.add_argument('--input_nc', type=int, default=3, help='number of channels of input data')
 parser.add_argument('--output_nc', type=int, default=3, help='number of channels of output data')
 parser.add_argument('--cuda', action='store_true', help='use GPU computation')
-parser.add_argument('--n_cpu', type=int, default=0, help='number of cpu threads to use during batch generation')
+parser.add_argument('--n_cpu', type=int, default=8, help='number of cpu threads to use during batch generation')
 opt = parser.parse_args()
 print(opt)
-
-if torch.cuda.is_available() and not opt.cuda:
-    print("WARNING: You have a CUDA device, so you should probably run with --cuda")
 
 ###### Definition of variables ######
 # Networks
@@ -46,13 +43,21 @@ netG_B2A = Generator(opt.output_nc, opt.input_nc)
 netD_A = Discriminator(opt.input_nc)
 netD_B = Discriminator(opt.output_nc)
 
+# Mult GPU
+if torch.cuda.device_count() > 1:
+    netG_A2B = torch.nn.DataParallel(netG_A2B)
+    netG_B2A = torch.nn.DataParallel(netG_B2A)
+    netD_A = torch.nn.DataParallel(netD_A)
+    netD_B = torch.nn.DataParallel(netD_B)
+    print('GPU count: {0}'.format(torch.cuda.device_count()))
+    print('Use DataParallel')
+
 writer = SummaryWriter()
 
-if True:
-    netG_A2B.cuda()
-    netG_B2A.cuda()
-    netD_A.cuda()
-    netD_B.cuda()
+netG_A2B.cuda()
+netG_B2A.cuda()
+netD_A.cuda()
+netD_B.cuda()
 
 netG_A2B.apply(weights_init_normal)
 netG_B2A.apply(weights_init_normal)
@@ -86,7 +91,7 @@ target_fake = Variable(Tensor(opt.batchSize).fill_(0.0), requires_grad=False).to
 fake_A_buffer = ReplayBuffer()
 fake_B_buffer = ReplayBuffer()
 
-writer.add_graph(netG_A2B,input_A.to(device))
+#writer.add_graph(netG_A2B,input_A.to(device))
 
 # Dataset loader
 transforms_ = [ transforms.CenterCrop((1200,2800)),
@@ -102,11 +107,12 @@ dataloader = DataLoader(ToothWhiteningDataset(opt.dataroot, transforms_=transfor
 # Loss plot
 #logger = Logger(opt.n_epochs, len(dataloader))
 ###################################
-
+print('Begin training ... ')
 global_step=0
 ###### Training ######
 for epoch in range(opt.epoch, opt.n_epochs):
     for i, batch in enumerate(dataloader):
+        print('epoch {0}/{1}, step {2}'.format(epoch,opt.n_epochs,i))
         # Set model input
         real_A = batch['A'].to(device)
         real_B = batch['B'].to(device)
@@ -190,10 +196,7 @@ for epoch in range(opt.epoch, opt.n_epochs):
         writer.add_images('Image/fake_A',(fake_A.cpu() + 1)/2.0,global_step)
         writer.add_images('Image/fake_B',(fake_B.cpu() + 1)/2.0,global_step)
         global_step +=1
-        # print({'loss_G': loss_G, 'loss_G_identity': (loss_identity_A + loss_identity_B), 'loss_G_GAN': (loss_GAN_A2B + loss_GAN_B2A),
-                    #'loss_G_cycle': (loss_cycle_ABA + loss_cycle_BAB), 'loss_D': (loss_D_A + loss_D_B)})#,
-                    #images={'real_A': real_A, 'real_B': real_B, 'fake_A': fake_A, 'fake_B': fake_B})
-
+      
     # Update learning rates
     lr_scheduler_G.step()
     lr_scheduler_D_A.step()
