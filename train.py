@@ -3,21 +3,18 @@
 import argparse
 import itertools
 
-from torchvision import transforms
-from torch.utils.data import DataLoader
-from torch.autograd import Variable
-from PIL import Image
 import torch
-import os
-
-from models import Generator
-from models import Discriminator
-from utils import ReplayBuffer
-from utils import LambdaLR
-from utils import weights_init_normal
-from datasets import ImageDataset
-from datasets import ToothWhiteningDataset
+from torch.autograd import Variable
+from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
+from torchvision import transforms
+
+from datasets import ToothWhiteningDataset
+from models import Discriminator
+from models import Generator
+from utils import LambdaLR
+from utils import ReplayBuffer
+from utils import weights_init_normal
 
 #os.environ['CUDA_VISIBLE_DEVICES'] = '2,3'
 
