@@ -33,8 +33,8 @@ class ToothWhiteningDataset(Dataset):
         self.transform = transforms.Compose(transforms_)
         self.target_transform = transforms.Compose(transforms_)
 
-        self.files_A = glob.glob(os.path.join(root, '%s/*/A.JPG' % mode))
-        self.files_B = glob.glob(os.path.join(root, '%s/*/B.JPG' % mode))
+        self.files_A = glob.glob(os.path.join(root, '%s/*/A1.JPG' % mode))
+        self.files_B = glob.glob(os.path.join(root, '%s/*/B1.JPG' % mode))
         print('build tooth whitening dataset done.')
 
     def __getitem__(self, index):

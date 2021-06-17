@@ -2,6 +2,7 @@
 
 import argparse
 import itertools
+import os
 
 import torch
 from torch.autograd import Variable
@@ -16,12 +17,12 @@ from utils import LambdaLR
 from utils import ReplayBuffer
 from utils import weights_init_normal
 
-os.environ['CUDA_VISIBLE_DEVICES'] = '0,1'
+#os.environ['CUDA_VISIBLE_DEVICES'] = '0,1'
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--epoch', type=int, default=0, help='starting epoch')
 parser.add_argument('--n_epochs', type=int, default=10000, help='number of epochs of training')
-parser.add_argument('--batchSize', type=int, default=4, help='size of the batches')
+parser.add_argument('--batchSize', type=int, default=8, help='size of the batches')
 parser.add_argument('--dataroot', type=str, default='datasets/tooth2whitening/', help='root directory of the dataset')
 parser.add_argument('--lr', type=float, default=0.0002, help='initial learning rate')
 parser.add_argument('--decay_epoch', type=int, default=100, help='epoch to start linearly decaying the learning rate to 0')
@@ -29,7 +30,7 @@ parser.add_argument('--size', type=int, default=512, help='size of the data crop
 parser.add_argument('--input_nc', type=int, default=3, help='number of channels of input data')
 parser.add_argument('--output_nc', type=int, default=3, help='number of channels of output data')
 parser.add_argument('--cuda', action='store_true', help='use GPU computation')
-parser.add_argument('--n_cpu', type=int, default=8, help='number of cpu threads to use during batch generation')
+parser.add_argument('--n_cpu', type=int, default=0, help='number of cpu threads to use during batch generation')
 opt = parser.parse_args()
 print(opt)
 
@@ -91,8 +92,7 @@ fake_B_buffer = ReplayBuffer()
 #writer.add_graph(netG_A2B,input_A.to(device))
 
 # Dataset loader
-transforms_ = [ transforms.CenterCrop((1200,2800)),
-                transforms.Resize((300,700)),
+transforms_ = [ transforms.Resize(350),
                 transforms.RandomCrop((256,256)),
                 transforms.RandomHorizontalFlip(),
                 transforms.RandomVerticalFlip(),
