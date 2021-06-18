@@ -52,8 +52,7 @@ input_A = Tensor(opt.batchSize, opt.input_nc, opt.size, opt.size)
 input_B = Tensor(opt.batchSize, opt.output_nc, opt.size, opt.size)
 
 # Dataset loader
-transforms_ = [ transforms.Resize(int(opt.size)),
-                transforms.ToTensor(),
+transforms_ = [ transforms.ToTensor(),
                 transforms.Normalize((0.5,0.5,0.5), (0.5,0.5,0.5)) ]
 dataloader = DataLoader(ToothWhiteningDataset(opt.dataroot, transforms_=transforms_, mode='test'),
                         batch_size=opt.batchSize, shuffle=False, num_workers=opt.n_cpu)
@@ -77,6 +76,7 @@ for i, batch in enumerate(dataloader):
     fake_A = 0.5*(netG_B2A(real_B).data + 1.0)
 
     # Save image files
+    save_image(fake_B, os.path.join(batch['Path'][0],'cycle-gan.png'))
     save_image(fake_A, 'output/A/%04d.png' % (i+1))
     save_image(fake_B, 'output/B/%04d.png' % (i+1))
 

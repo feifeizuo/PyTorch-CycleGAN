@@ -92,10 +92,7 @@ fake_B_buffer = ReplayBuffer()
 #writer.add_graph(netG_A2B,input_A.to(device))
 
 # Dataset loader
-transforms_ = [ transforms.Resize(350),
-                transforms.RandomCrop((256,256)),
-                transforms.RandomHorizontalFlip(),
-                transforms.RandomVerticalFlip(),
+transforms_ = [ transforms.Resize(512),
                 transforms.ToTensor(),
                 transforms.Normalize((0.5,0.5,0.5), (0.5,0.5,0.5))] # normalize to [-1,1]
 dataloader = DataLoader(ToothWhiteningDataset(opt.dataroot, transforms_=transforms_, unaligned=False),
@@ -200,8 +197,8 @@ for epoch in range(opt.epoch, opt.n_epochs):
     lr_scheduler_D_B.step()
 
     # Save models checkpoints
-    torch.save(netG_A2B.state_dict(), 'output/netG_A2B.pth')
-    torch.save(netG_B2A.state_dict(), 'output/netG_B2A.pth')
-    torch.save(netD_A.state_dict(), 'output/netD_A.pth')
-    torch.save(netD_B.state_dict(), 'output/netD_B.pth')
+    torch.save(netG_A2B.state_dict(), 'output/netG_A2B_{}.pth'.format(epoch))
+    torch.save(netG_B2A.state_dict(), 'output/netG_B2A_{}.pth'.format(epoch))
+    torch.save(netD_A.state_dict(), 'output/netD_A_{}.pth'.format(epoch))
+    torch.save(netD_B.state_dict(), 'output/netD_B_{}.pth'.format(epoch))
 ###################################
